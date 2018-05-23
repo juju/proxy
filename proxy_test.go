@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/juju/testing"
+	jc "github.com/juju/testing/checkers"
 	gc "gopkg.in/check.v1"
 
 	"github.com/juju/proxy"
@@ -17,6 +18,19 @@ type proxySuite struct {
 }
 
 var _ = gc.Suite(&proxySuite{})
+
+func (s *proxySuite) TestHasProxySet(c *gc.C) {
+	var proxies proxy.Settings
+	c.Check(proxies.HasProxySet(), jc.IsFalse)
+	// Having a no proxy value set doesn't mean there is a proxy value.
+	proxies.NoProxy = "localhost,127.0.0.1"
+	c.Check(proxies.HasProxySet(), jc.IsFalse)
+	for _, v := range []*string{&proxies.Http, &proxies.Https, &proxies.Ftp} {
+		*v = "some-proxy"
+		c.Check(proxies.HasProxySet(), jc.IsTrue)
+		*v = ""
+	}
+}
 
 func (s *proxySuite) TestDetectNoSettings(c *gc.C) {
 	// Patch all of the environment variables we check out just in case the
@@ -104,6 +118,10 @@ func (s *proxySuite) TestDetectPrimaryPreference(c *gc.C) {
 func (s *proxySuite) TestAsScriptEnvironmentEmpty(c *gc.C) {
 	proxies := proxy.Settings{}
 	c.Assert(proxies.AsScriptEnvironment(), gc.Equals, "")
+	proxies = proxy.Settings{
+		NoProxy: "localhost",
+	}
+	c.Assert(proxies.AsScriptEnvironment(), gc.Equals, "")
 }
 
 func (s *proxySuite) TestAsScriptEnvironmentOneValue(c *gc.C) {
@@ -137,6 +155,10 @@ export NO_PROXY=10.0.3.1,localhost`[1:]
 
 func (s *proxySuite) TestAsEnvironmentValuesEmpty(c *gc.C) {
 	proxies := proxy.Settings{}
+	c.Assert(proxies.AsEnvironmentValues(), gc.HasLen, 0)
+	proxies = proxy.Settings{
+		NoProxy: "localhost",
+	}
 	c.Assert(proxies.AsEnvironmentValues(), gc.HasLen, 0)
 }
 
@@ -222,14 +244,19 @@ func (s *proxySuite) TestSetEnvironmentValues(c *gc.C) {
 
 func (s *proxySuite) TestAutoNoProxy(c *gc.C) {
 	proxies := proxy.Settings{
+		Http:    "test",
 		NoProxy: "10.0.3.1,localhost",
 	}
 
 	expectedFirst := []string{
+		"http_proxy=test",
+		"HTTP_PROXY=test",
 		"no_proxy=10.0.3.1,localhost",
 		"NO_PROXY=10.0.3.1,localhost",
 	}
 	expectedSecond := []string{
+		"http_proxy=test",
+		"HTTP_PROXY=test",
 		"no_proxy=10.0.3.1,10.0.3.2,localhost",
 		"NO_PROXY=10.0.3.1,10.0.3.2,localhost",
 	}
