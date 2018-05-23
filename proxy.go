@@ -48,10 +48,20 @@ func DetectProxies() Settings {
 	}
 }
 
+// HasProxySet returns true if there is a proxy value for HTTP, HTTPS or FTP.
+func (s *Settings) HasProxySet() bool {
+	return s.Http != "" ||
+		s.Https != "" ||
+		s.Ftp != ""
+}
+
 // AsScriptEnvironment returns a potentially multi-line string in a format
 // that specifies exported key=value lines. There are two lines for each non-
 // empty proxy value, one lower-case and one upper-case.
 func (s *Settings) AsScriptEnvironment() string {
+	if !s.HasProxySet() {
+		return ""
+	}
 	var lines []string
 	addLine := func(proxy, value string) {
 		if value != "" {
@@ -72,6 +82,9 @@ func (s *Settings) AsScriptEnvironment() string {
 // suitable to be used in a command environment. There are two values for each
 // non-empty proxy value, one lower-case and one upper-case.
 func (s *Settings) AsEnvironmentValues() []string {
+	if !s.HasProxySet() {
+		return nil
+	}
 	lines := []string{}
 	addLine := func(proxy, value string) {
 		if value != "" {
