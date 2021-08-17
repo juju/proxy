@@ -75,7 +75,7 @@ func (s *Settings) AsScriptEnvironment() string {
 	addLine(https_proxy, s.Https)
 	addLine(ftp_proxy, s.Ftp)
 	addLine(no_proxy, s.FullNoProxy())
-	return strings.Join(lines, "\n")
+	return fmt.Sprintf("%s\n", strings.Join(lines, "\n"))
 }
 
 // AsEnvironmentValues returns a slice of strings of the format "key=value"
